@@ -8,11 +8,10 @@ import androidx.navigation.NavController;
 import androidx.navigation.NavGraph;
 import androidx.navigation.NavGraphNavigator;
 import androidx.navigation.NavigatorProvider;
-import androidx.navigation.fragment.FragmentNavigator;
 
-import com.example.jetpackapplication.MainApplication;
 import com.example.jetpackapplication.model.Destination;
 import com.example.jetpackapplication.navigator.FixFragmentNavigator;
+import com.example.libcommon.AppGlobals;
 
 import java.util.Map;
 
@@ -53,7 +52,7 @@ public class NavGraphBuilder {
                 navGraph.addDestination(destination);
             } else {
                 ActivityNavigator.Destination destination = activityNavigator.createDestination();
-                destination.setComponentName(new ComponentName(MainApplication.applicationContext().getPackageName(), dest.className));
+                destination.setComponentName(new ComponentName(AppGlobals.getApplication().getPackageName(), dest.className));
                 destination.setId(dest.id);
                 destination.addDeepLink(dest.pageUrl);
 

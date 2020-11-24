@@ -15,7 +15,7 @@ import com.example.jetpackapplication.R;
 import com.example.jetpackapplication.model.BottomBar;
 import com.example.jetpackapplication.model.Destination;
 import com.example.jetpackapplication.util.AppConfig;
-import com.example.jetpackapplication.util.ToolUtil;
+import com.example.libcommon.ToolUtil;
 import com.google.android.material.bottomnavigation.BottomNavigationItemView;
 import com.google.android.material.bottomnavigation.BottomNavigationMenuView;
 import com.google.android.material.bottomnavigation.BottomNavigationView;

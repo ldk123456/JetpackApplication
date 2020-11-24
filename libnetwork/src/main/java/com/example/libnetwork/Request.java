@@ -1,12 +1,19 @@
 package com.example.libnetwork;
 
+import android.annotation.SuppressLint;
+import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.annotation.IntDef;
+import androidx.annotation.NonNull;
+import androidx.arch.core.executor.ArchTaskExecutor;
+
+import com.example.libnetwork.cache.CacheManager;
 
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Field;
@@ -19,7 +26,7 @@ import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
 
-public abstract class Request<T, R extends Request> {
+public abstract class Request<T, R extends Request> implements Cloneable {
     //只访问本地缓存，即便本地缓存不存在，也不会发起网络请求
     private static final int CACHE_ONLY = 1;
     //先访问缓存，同时发起网络的请求，成功后缓存到本地
@@ -35,6 +42,7 @@ public abstract class Request<T, R extends Request> {
     private String mCacheKey;
     private Type mType;
     private Class mClass;
+    private int mCacheStrategy = NET_ONLY;
 
     @IntDef({CACHE_ONLY, CACHE_FIRST, NET_ONLY, NET_CACHE})
     @Retention(RetentionPolicy.SOURCE)
@@ -83,6 +91,11 @@ public abstract class Request<T, R extends Request> {
         return (R) this;
     }
 
+    public R setCacheStrategy(@CacheStrategy int cacheStrategy) {
+        mCacheStrategy = cacheStrategy;
+        return (R) this;
+    }
+
     public R responseType(Class clazz) {
         mClass = clazz;
         return (R) this;
@@ -103,7 +116,22 @@ public abstract class Request<T, R extends Request> {
 
     protected abstract okhttp3.Request generateRequest(okhttp3.Request.Builder builder);
 
-    public ApiResponse<T> execute(final JsonCallback<T> callback) {
+    @SuppressLint("RestrictedApi")
+    public void execute(final JsonCallback<T> callback) {
+        if (mCacheStrategy != NET_ONLY) {
+            ArchTaskExecutor.getIOThreadExecutor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    ApiResponse<T> cacheData = readCache();
+                    callback.onCacheSuccess(cacheData);
+                }
+            });
+        }
+
+        if (mCacheStrategy == CACHE_ONLY) {
+            return;
+        }
+
         getCall().enqueue(new Callback() {
             @Override
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
@@ -123,10 +151,13 @@ public abstract class Request<T, R extends Request> {
                 }
             }
         });
-        return null;
     }
 
     public ApiResponse<T> execute() {
+        if (mCacheStrategy == CACHE_ONLY) {
+            return readCache();
+        }
+
         try {
             Response response = getCall().execute();
             return parseResponse(response, null);
@@ -166,6 +197,39 @@ public abstract class Request<T, R extends Request> {
         result.success = success;
         result.status = status;
         result.message = message;
+
+        if (mCacheStrategy != NET_ONLY && result.success
+                && result.body instanceof Serializable) {
+            saveCache(result.body);
+        }
+
         return result;
+    }
+
+    private ApiResponse<T> readCache() {
+        String key = TextUtils.isEmpty(mCacheKey) ? generateCacheKey() : mCacheKey;
+        Object cache = CacheManager.getCache(key);
+        ApiResponse<T> result = new ApiResponse<>();
+        result.status = 304;
+        result.message = "缓存获取成功";
+        result.body = (T) cache;
+        result.success = true;
+        return result;
+    }
+
+    private void saveCache(T body) {
+        String key = TextUtils.isEmpty(mCacheKey) ? generateCacheKey() : mCacheKey;
+        CacheManager.saveCache(key, body);
+    }
+
+    private String generateCacheKey() {
+        mCacheKey = UrlCreator.createUrlFromParams(mUrl, params);
+        return mCacheKey;
+    }
+
+    @NonNull
+    @Override
+    protected Request<T, R> clone() throws CloneNotSupportedException {
+        return (Request<T, R>) super.clone();
     }
 }

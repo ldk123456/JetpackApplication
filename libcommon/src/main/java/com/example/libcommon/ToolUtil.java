@@ -1,4 +1,4 @@
-package com.example.jetpackapplication.util;
+package com.example.libcommon;
 
 import android.content.Context;
 

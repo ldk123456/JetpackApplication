@@ -5,9 +5,10 @@ import android.text.TextUtils;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
-import com.example.jetpackapplication.MainApplication;
 import com.example.jetpackapplication.model.BottomBar;
 import com.example.jetpackapplication.model.Destination;
+import com.example.libcommon.AppGlobals;
+import com.example.libcommon.ToolUtil;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -34,7 +35,8 @@ public class AppConfig {
     public Map<String, Destination> getDestConfig() {
         if (ToolUtil.isEmptyMap(mDestConfig)) {
             String destination = parseFile("destination.json");
-            mDestConfig = JSON.parseObject(destination, new TypeReference<Map<String, Destination>>() {}.getType());
+            mDestConfig = JSON.parseObject(destination, new TypeReference<Map<String, Destination>>() {
+            }.getType());
         }
         return mDestConfig;
     }
@@ -52,7 +54,7 @@ public class AppConfig {
             return "";
         }
 
-        AssetManager assets = MainApplication.applicationContext().getResources().getAssets();
+        AssetManager assets = AppGlobals.getApplication().getResources().getAssets();
         InputStream input = null;
         BufferedReader reader = null;
         StringBuilder builder = new StringBuilder();
